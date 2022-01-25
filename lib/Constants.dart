@@ -17,8 +17,3 @@ const kTextNagpur = Padding(
 const kBottomTextStyle = Text("SBE Technologies Pvt Ltd.",
   style: TextStyle(color: Colors.white),
 );
-
-class Strings{
-  static String url = 'https://api.azulman-test.com/app/userloginwithotp';
-}
-

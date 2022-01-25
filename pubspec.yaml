@@ -15,11 +15,24 @@ dependencies:
   flutter_otp_text_field: ^1.0.0
   http: ^0.13.4
   form_field_validator: ^1.1.0
+  platform_device_id: ^1.0.1
+  client_information: ^2.0.2+2
+  device_info_plus: ^3.2.1
+  fluttertoast: ^8.0.8
+  pin_input_text_field: ^4.1.1
+  pin_code_fields: ^7.3.0
+  sizer: ^2.0.15
+  flutter_screenutil: ^5.1.0
+  sms_autofill: ^2.2.0
+  otp_autofill: ^2.1.0
+
+
+
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  sms_autofill: ^2.2.0
+
 
 flutter_lints: ^1.0.0
 

@@ -1,4 +1,4 @@
-import 'package:azulman/Screens/splashscreen.dart';
+import 'package:azulman/Screens/LoginScreen/splashscreen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
