@@ -104,7 +104,7 @@ class _EmailloginState extends State<Emaillogin> {
                       width: MediaQuery.of(context).size.width,
                       height: MediaQuery.of(context).size.height * 0.12,
                       child: const Align(
-                        alignment: Alignment(0.9, 0.50),
+                        alignment: Alignment(0.9, 0.17),
                         child: Text(
                           'Nagpur',
                           style: TextStyle(
@@ -117,7 +117,7 @@ class _EmailloginState extends State<Emaillogin> {
                   ],
                 ),
                 Positioned(
-                  top: MediaQuery.of(context).devicePixelRatio * 12,
+                  top: MediaQuery.of(context).devicePixelRatio * 12.9,
                   left: SizeConfig.screenWidth! / 2.5,
                   child: Container(
                     height: 80,

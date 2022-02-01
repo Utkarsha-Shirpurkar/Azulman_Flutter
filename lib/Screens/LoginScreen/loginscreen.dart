@@ -6,11 +6,13 @@ import 'package:azulman/Services/json.info.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
 import 'package:azulman/Services/Networking.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'OTPVerification.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class loginscreen extends StatefulWidget {
   @override
@@ -153,9 +155,9 @@ class _loginscreenState extends State<loginscreen> {
                             .of(context)
                             .size
                             .width,
-                        height: MediaQuery.of(context).size.height*0.12,
+                        height: MediaQuery.of(context).size.height * 0.12,
                         child: const Align(
-                          alignment: Alignment(0.9, 0.50),
+                          alignment: Alignment(0.9, 0.17),
                           child: Text(
                             'Nagpur',
                             style: TextStyle(
@@ -168,11 +170,12 @@ class _loginscreenState extends State<loginscreen> {
                     ],
                   ),
                   Positioned(
-                    top: MediaQuery.of(context).devicePixelRatio * 12,
+                    top: MediaQuery.of(context).devicePixelRatio * 12.9,
                     left: SizeConfig.screenWidth! / 2.5,
                     child: Container(
-                      height: 80,
+                     height: 80,
                       width: 80,
+                      // margin: EdgeInsets.symmetric(vertical: 23),
                       decoration: kAzulmanLogo,
                     ),
                   ),
@@ -197,6 +200,16 @@ class _loginscreenState extends State<loginscreen> {
                       padding: const EdgeInsets.only(left: 20.0, right: 20.0),
                       child: TextFormField(
                           autovalidateMode: AutovalidateMode.onUserInteraction,
+                        key: formkey,
+                        validator: (value) {
+                          if(value!.isEmpty){
+                            return "Phone Number cannot be blank.";
+                          }else if(value.length < 10 ) {
+                            return "Please enter a valid 10 digit Phone Number";
+                          }else {
+                            return null;
+                          }
+                        },
                           keyboardType: TextInputType.number,
                           controller: phonenoController,
                           maxLength: 10,
@@ -207,7 +220,7 @@ class _loginscreenState extends State<loginscreen> {
                           decoration: InputDecoration(
                             counterText: '',
                             hintText: 'Phone Number',
-                            errorText: errorText,
+                            // errorText: errorText,
                             prefixIcon: Icon(
                               Icons.phone,
                               color: Colors.black,
@@ -236,7 +249,9 @@ class _loginscreenState extends State<loginscreen> {
                               .splashFactory, //Used for blue flash light on pressed button.
                         ),
 
-                        onPressed: () {
+                        onPressed: () async {
+                          final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+                          sharedPreferences.setString('phone', phonenoController.text);
                           _getDeviceDetails();
 
                           phonenoController.value.text.isEmpty?

@@ -12,6 +12,8 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 import 'Emaillogin.dart';
 import 'NavBar.dart';
 import 'package:azulman/Constants.dart';
+import 'package:provider/provider.dart';
+import 'package:otp_autofill/otp_autofill.dart';
 
 class OTPVerification extends StatefulWidget {
   OTPVerification(
@@ -28,55 +30,89 @@ class OTPVerification extends StatefulWidget {
 }
 
 class _OTPVerificationState extends State<OTPVerification> {
-  TextEditingController otpController = TextEditingController();
-  bool isCountDown = false;
-  Duration duration = Duration(seconds: 05);
+  late OTPTextEditController otpTextEditController;
+  late OTPInteractor _otpInteractor;
+  int _counter = 0;
+
   Timer? timer;
-  String buttonName = '';
 
-
+  // NEW : Change Duration value of this two variables.
+  int durationValue = 45;
+  Duration duration = const Duration(seconds: 45);
 
   @override
   void initState() {
     super.initState();
+
+    // NEW : Listening for OTP.
+    listenForOtp();
     startTimer();
+  }
+
+  // NEW : Listens for OTP.
+  void listenForOtp() {
+    _otpInteractor = OTPInteractor();
+    _otpInteractor
+        .getAppSignature()
+        //ignore: avoid_print
+        .then((value) => print('signature - $value'));
+
+    otpTextEditController = OTPTextEditController(
+      codeLength: 6,
+      //ignore: avoid_print
+      onCodeReceive: (code) => print('Your Application receive code - $code'),
+      otpInteractor: _otpInteractor,
+    )..startListenUserConsent(
+        (code) {
+          final exp = RegExp(r'(\d{6})');
+          return exp.stringMatch(code ?? '') ?? '';
+        },
+      );
+  }
+
+  @override
+  Future<void> dispose() async {
+    // NEW : RESET the Timer;
+    reset();
+    // NEW : Stop listening for OTP.
+    await otpTextEditController.stopListen();
+    super.dispose();
   }
 
   void reset() {
     setState(() {
-      duration = Duration();
+      // NEW : Reset the duration value.
+      duration = Duration(seconds: durationValue);
     });
   }
 
   void addTime() {
-    final decreaseSeconds = 1;
+    const decreaseSeconds = 1;
     setState(() {
-      final seconds = duration.inSeconds - decreaseSeconds;
-      print("seconds: $seconds");
-      if (seconds < 0) {
+      final sec = duration.inSeconds - decreaseSeconds;
+      if (sec < 0) {
         timer?.cancel();
+        context.read<ResendChangeNotifier>().toggleResend();
       } else {
-        duration = Duration(seconds: seconds);
+        duration = Duration(seconds: sec);
       }
     });
   }
 
   void startTimer() {
-    isCountDown = true;
     timer = Timer.periodic(Duration(seconds: 1), (_) => addTime());
   }
 
   late http.Response httpResponse;
   late VerifyUser login;
+  late LoginResponse resendotp;
 
   String twoDigits(int n) => n.toString().padLeft(2, '0');
 
   @override
   Widget build(BuildContext context) {
-    // final otpController = TextEditingController();
-
-    final seconds = twoDigits(duration.inSeconds.remainder(5));
-    buttonName = '00:$seconds';
+    String secondsText = twoDigits(duration.inSeconds);
+    String buttonName = '00:$secondsText';
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -147,7 +183,7 @@ class _OTPVerificationState extends State<OTPVerification> {
                       width: MediaQuery.of(context).size.width,
                       height: MediaQuery.of(context).size.height * 0.12,
                       child: const Align(
-                        alignment: Alignment(0.9, 0.55),
+                        alignment: Alignment(0.9, 0.17),
                         child: Text(
                           'Nagpur',
                           style: TextStyle(
@@ -160,7 +196,7 @@ class _OTPVerificationState extends State<OTPVerification> {
                   ],
                 ),
                 Positioned(
-                  top: MediaQuery.of(context).devicePixelRatio * 12,
+                  top: MediaQuery.of(context).devicePixelRatio * 12.9,
                   left: SizeConfig.screenWidth! / 2.5,
                   child: Container(
                     height: 80,
@@ -198,7 +234,7 @@ class _OTPVerificationState extends State<OTPVerification> {
                     padding:
                         EdgeInsets.symmetric(vertical: 0.0, horizontal: 80.0),
                     child: PinCodeTextField(
-                        controller: otpController,
+                        controller: otpTextEditController,
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         keyboardType: TextInputType.number,
                         animationType: AnimationType.scale,
@@ -229,40 +265,61 @@ class _OTPVerificationState extends State<OTPVerification> {
                         "Didn't receive OTP?",
                         style: TextStyle(color: Colors.black54),
                       ),
-                      const SizedBox(width: 10.0),
-                      buttonName != "00:00"
+                      SizedBox(width: 10.0),
+
+                      // NEW : Check if OTP is resendOTP = false
+                      (!context.watch<ResendChangeNotifier>().resendOTP)
                           ? Text(
-                              '$buttonName',
+                              buttonName,
                               style: const TextStyle(
                                 fontSize: 15.0,
                               ),
                             )
                           : InkWell(
-                              onTap: () {
-                                Text('00:$seconds');
-                                print(buttonName);
-                                // _sendDataToSecondScreen(context);
-                              },
-                              child: Text(
-                                'Resend OTP',
-                                style: const TextStyle(
+                              child: const Text(
+                                "Resend OTP",
+                                style: TextStyle(
                                   color: Colors.black54,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15.0,
                                 ),
                               ),
+                              onTap: () {
+                                _counter++;
+                                if (_counter <= 2) {
+                                  setState(() async {
+                                    // NEW : Set the resendOTP = false
+                                    context
+                                        .read<ResendChangeNotifier>()
+                                        .toggleResend();
+                                    var data = jsonEncode(<String, String>{
+                                      'User': '${widget.phoneno}',
+                                      'DeviceName': '${widget.deviceName}',
+                                      'DeviceID': '${widget.identifier}',
+                                    });
+                                    httpResponse = await API_Manager()
+                                        .getData(Strings.loginWithOtpUrl, data);
+
+                                    if (httpResponse.statusCode == 200) {
+                                      var jsonString = httpResponse.body;
+                                      var jsonMap = jsonDecode(jsonString);
+                                      resendotp =
+                                          LoginResponse.fromJson(jsonMap);
+                                    }
+                                    // NEW : Reset the timer
+                                    listenForOtp();
+                                    reset();
+                                    // NEW : Start the timer
+                                    listenForOtp();
+                                    _otpInteractor = OTPInteractor();
+                                    startTimer();
+                                  });
+                                } else {
+                                  reset();
+                                  _sendDataToSecondScreen(context);
+                                }
+                              },
                             ),
-                      // InkWell(
-                      //   onTap: () {
-                      //    _sendDataToSecondScreen(context);
-                      //   },
-                      //   child: const Text(
-                      //     'Resend OTP',
-                      //     style: TextStyle(
-                      //         color: Colors.black54,
-                      //         fontWeight: FontWeight.bold),
-                      //   ),
-                      // ),
                     ],
                   ),
                   const SizedBox(height: 15.0),
@@ -278,12 +335,12 @@ class _OTPVerificationState extends State<OTPVerification> {
                         splashFactory: NoSplash.splashFactory,
                       ),
                       onPressed: () {
-                        otpController.value.text.isEmpty
+                        otpTextEditController.value.text.isEmpty
                             ? Fluttertoast.showToast(
                                 msg: 'Please enter the OTP.',
                                 backgroundColor: Colors.black45,
                                 timeInSecForIosWeb: 5)
-                            : otpController.text.length < 6
+                            : otpTextEditController.text.length < 6
                                 ? Fluttertoast.showToast(
                                     msg: 'Please enter a valid 6 digit OTP.',
                                     backgroundColor: Colors.black45,
@@ -291,7 +348,7 @@ class _OTPVerificationState extends State<OTPVerification> {
                                 : setState(() async {
                                     var data = jsonEncode(<String, String>{
                                       'User': '${widget.phoneno}',
-                                      'OTP': otpController.text,
+                                      'OTP': otpTextEditController.text,
                                       'DeviceName': '${widget.deviceName}',
                                       'DeviceID': '${widget.identifier}',
                                     });
@@ -302,16 +359,15 @@ class _OTPVerificationState extends State<OTPVerification> {
                                       var jsonString = httpResponse.body;
                                       var jsonMap = jsonDecode(jsonString);
                                       login = VerifyUser.fromJson(jsonMap);
-                                    }
+                                     }
                                     if (login.isValidUser == "true") {
                                       Navigator.pushAndRemoveUntil(
                                           context,
                                           MaterialPageRoute(
-                                              builder: (context) =>
-                                                  Customerhome(),
+                                            builder: (context) =>
+                                                Customerhome(),
                                           ),
-                                          ModalRoute.withName("/Customerhome")
-                                      );
+                                          ModalRoute.withName("/Customerhome"));
                                     } else {
                                       Fluttertoast.showToast(
                                         msg: 'The entered OTP is Incorrect.',
@@ -354,7 +410,18 @@ class _OTPVerificationState extends State<OTPVerification> {
                   deviceName: DeviceName,
                   identifier: DeviceId,
                 )),
-        ModalRoute.withName("/Emaillogin")
-    );
+        ModalRoute.withName("/Emaillogin"));
+  }
+}
+
+//NEW : Change Notifier which notifies and changes state where it is used.
+class ResendChangeNotifier with ChangeNotifier {
+  bool _resendOTP = false;
+
+  bool get resendOTP => _resendOTP;
+
+  void toggleResend() {
+    _resendOTP = !_resendOTP;
+    notifyListeners();
   }
 }

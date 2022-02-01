@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'package:azulman/Screens/CustomerScreen/Customerhome.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'loginscreen.dart';
 
+String? finalPhone;
 
 class splashscreen extends StatefulWidget {
 
@@ -13,15 +17,29 @@ class _splashscreenState extends State<splashscreen> {
   @override
 
   void initState() {
+    getValidationData().whenComplete(() async {
+      Timer(
+        const Duration(seconds: 3),
+            () => Get.offAll(finalPhone == null ? loginscreen() : Customerhome()),
+
+            // Navigator.of(context).pushReplacement(MaterialPageRoute(
+            //   builder: (BuildContext context)  =>  loginscreen(),
+            // ),
+            // ),
+      );
+      print('hello');
+    });
     super.initState();
-    Timer(
-      const Duration(seconds: 3),
-          () =>
-          Navigator.of(context).pushReplacement(MaterialPageRoute(
-            builder: (BuildContext context) =>  loginscreen(),
-          ),
-          ),
-    );
+
+  }
+
+  Future getValidationData () async {
+    final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    var obtainedPhone = sharedPreferences.getString('phone');
+     setState(() {
+       finalPhone = obtainedPhone;
+     });
+     print(finalPhone);
   }
 
   @override

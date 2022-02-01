@@ -25,8 +25,10 @@ dependencies:
   flutter_screenutil: ^5.1.0
   sms_autofill: ^2.2.0
   otp_autofill: ^2.1.0
-
-
+  dependencies:
+  shared_preferences: ^2.0.12
+  get: ^4.6.1
+  provider: ^6.0.2
 
 
 dev_dependencies:

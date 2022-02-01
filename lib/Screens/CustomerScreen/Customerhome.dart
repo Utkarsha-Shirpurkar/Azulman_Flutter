@@ -1,11 +1,11 @@
-import 'package:azulman/Screens/CustomerScreen/preferences.dart';
 import 'package:azulman/Screens/LoginScreen/loginscreen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:azulman/Screens/CustomerScreen/preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../Constants.dart';
 import '../LoginScreen/NavBar.dart';
+import 'package:get/get.dart';
 
 class Customerhome extends StatefulWidget {
   @override
@@ -109,7 +109,7 @@ class _CustomerhomeState extends State<Customerhome> {
                   ),
                 ),
                 SizedBox(
-                 height: MediaQuery.of(context).devicePixelRatio * 82,
+                 height: MediaQuery.of(context).devicePixelRatio * 184,
                 ),
                 Container(
                   height: 45,
@@ -121,8 +121,11 @@ class _CustomerhomeState extends State<Customerhome> {
                     style: const ButtonStyle(
                       splashFactory: NoSplash.splashFactory,
                     ),
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => loginscreen()));
+                    onPressed: () async {
+                      final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+                      sharedPreferences.remove('phone');
+                      Get.offAll(loginscreen());
+                      // Navigator.push(context, MaterialPageRoute(builder: (context) => loginscreen()));
                     },
                     child: const Text(
                       'LOGOUT',
@@ -168,7 +171,7 @@ class _CustomerhomeState extends State<Customerhome> {
                         width: MediaQuery.of(context).size.width,
                         height: MediaQuery.of(context).size.height*0.12,
                         child: const Align(
-                          alignment: Alignment(0.9, 0.50),
+                          alignment: Alignment(0.9, 0.17),
                           child: Text(
                             'Nagpur',
                             style: TextStyle(
@@ -181,7 +184,7 @@ class _CustomerhomeState extends State<Customerhome> {
                     ],
                   ),
                   Positioned(
-                    top: MediaQuery.of(context).devicePixelRatio * 12,
+                    top: MediaQuery.of(context).devicePixelRatio * 12.9,
                     left: SizeConfig.screenWidth! / 2.5,
                     child: Container(
                       height: 80,

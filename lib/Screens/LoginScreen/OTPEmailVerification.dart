@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:azulman/Screens/CustomerScreen/Customerhome.dart';
 import 'package:azulman/Services/json.info.dart';
@@ -7,8 +8,10 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:azulman/Services/api_const.dart';
 import 'package:azulman/Services/Networking.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/src/provider.dart';
 import '../../Constants.dart';
 import 'NavBar.dart';
+import 'OTPVerification.dart';
 
 class OTPEmailVerification extends StatefulWidget {
   OTPEmailVerification({required this.phoneNo, required this.email, required this.deviceName, required this.identifier});
@@ -25,11 +28,52 @@ class _OTPEmailVerificationState extends State<OTPEmailVerification> {
 
   TextEditingController otpController = TextEditingController();
 
+  Timer? timer;
+  // NEW : Change Duration value of this two variables.
+  int durationValue = 45;
+  Duration duration = const Duration(seconds: 45);
+
+  @override
+  void initState() {
+    super.initState();
+
+    startTimer();
+  }
+
+  void reset() {
+    setState(() {
+      // NEW : Reset the duration value.
+      duration = Duration(seconds: durationValue);
+    });
+  }
+
+  void addTime() {
+    const decreaseSeconds = 1;
+    setState(() {
+      final sec = duration.inSeconds - decreaseSeconds;
+      if (sec < 0) {
+        timer?.cancel();
+        context.read<ResendChangeTimerNotifier>().toggleResendTimer();
+      } else {
+        duration = Duration(seconds: sec);
+      }
+    });
+  }
+
+  void startTimer() {
+    timer = Timer.periodic(Duration(seconds: 1), (_) => addTime());
+  }
+
   late http.Response httpResponse;
   late VerifyUser login;
+  late EmailLoginResponse resendotp;
+
+  String twoDigits(int n) => n.toString().padLeft(2, '0');
 
   @override
   Widget build(BuildContext context) {
+    String secondsText = twoDigits(duration.inSeconds);
+    String buttonName = '00:$secondsText';
     return Scaffold(
       resizeToAvoidBottomInset: false,
       extendBodyBehindAppBar: true,
@@ -105,7 +149,7 @@ class _OTPEmailVerificationState extends State<OTPEmailVerification> {
                           .size
                           .height * 0.12,
                       child: const Align(
-                        alignment: Alignment(0.9, 0.50),
+                        alignment: Alignment(0.9, 0.17),
                         child: Text(
                           'Nagpur',
                           style: TextStyle(
@@ -118,7 +162,7 @@ class _OTPEmailVerificationState extends State<OTPEmailVerification> {
                   ],
                 ),
                 Positioned(
-                  top: MediaQuery.of(context).devicePixelRatio * 12,
+                  top: MediaQuery.of(context).devicePixelRatio * 12.9,
                   left: SizeConfig.screenWidth! / 2.5,
                   child: Container(
                     height: 80,
@@ -188,15 +232,44 @@ class _OTPEmailVerificationState extends State<OTPEmailVerification> {
                         style: TextStyle(color: Colors.black54),
                       ),
                       const SizedBox(width: 10.0),
-                      InkWell(
-                        onTap: () {
-                        },
-                        child: const Text(
-                          'Resend OTP',
-                          style: TextStyle(
-                              color: Colors.black54,
-                              fontWeight: FontWeight.bold),
+                      if (!context.watch<ResendChangeTimerNotifier>().resendOTP) Text(
+                        buttonName,
+                        style: const TextStyle(
+                          fontSize: 15.0,
                         ),
+                      ) else InkWell(
+                        child: const Text(
+                          "Resend OTP",
+                          style: TextStyle(
+                            color: Colors.black54,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15.0,
+                          ),
+                        ),
+                        onTap: () {
+                          setState(() async {
+                            // NEW : Set the resendOTP = false
+                            context.read<ResendChangeTimerNotifier>().toggleResendTimer();
+                            var data = jsonEncode(<String, String>{
+                              'Phoneno': '${widget.phoneNo}',
+                              'Email': '${widget.email}',
+                              'DeviceName': '${widget.deviceName}',
+                              'DeviceID': '${widget.identifier}',
+                            });
+                            httpResponse = await API_Manager()
+                                .getData(Strings.sendotpinemail, data);
+
+                            if (httpResponse.statusCode == 200) {
+                              var jsonString = httpResponse.body;
+                              var jsonMap = jsonDecode(jsonString);
+                             resendotp = EmailLoginResponse.fromJson(jsonMap);
+                            }
+                            // NEW : Reset the timer
+                            reset();
+                            // NEW : Start the timer
+                            startTimer();
+                          });
+                        },
                       ),
                     ],
                   ),
@@ -270,6 +343,17 @@ class _OTPEmailVerificationState extends State<OTPEmailVerification> {
         ],
       ),
     );
+  }
+}
 
+//NEW : Change Notifier which notifies and changes state where it is used.
+class ResendChangeTimerNotifier with ChangeNotifier {
+  bool _resendOTP = false;
+
+  bool get resendOTP => _resendOTP;
+
+  void toggleResendTimer() {
+    _resendOTP = !_resendOTP;
+    notifyListeners();
   }
 }
